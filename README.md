@@ -18,7 +18,7 @@ Progetto Unity didattico che implementa il **Command Pattern** attraverso un pro
 
 ## Panoramica
 
-Il progetto dimostra l'applicazione del **Command Pattern** in un contesto di gioco a turni. Due giocatori si alternano eseguendo attacchi su una griglia 10×10. Ogni azione viene incapsulata in un oggetto comando, che può essere eseguito e annullato.
+Il progetto dimostra l'applicazione del **Command Pattern** in un contesto di gioco a turni. Due giocatori si alternano eseguendo attacchi su una griglia 3D configurabile. Ogni azione viene incapsulata in un oggetto comando, che può essere eseguito e annullato. La selezione della cella avviene tramite raycast dal mouse; il feedback visivo (colore della cella) riflette lo stato corrente.
 
 ---
 
@@ -107,11 +107,12 @@ Comando concreto che rappresenta un attacco a una cella della griglia nemica.
 
 ### `Cell.cs` — Namespace: `BattleNavale.Core`
 
-Rappresenta una singola cella della griglia.
+Rappresenta una singola cella della griglia (dati puri, nessun `MonoBehaviour`).
 
 | Membro | Descrizione |
 |---|---|
 | `CellState` (enum) | `Intact` o `Hit` |
+| `State` | Getter pubblico dello stato corrente |
 | `ReceiveAttack()` | Imposta lo stato su `Hit` |
 | `UndoAttack()` | Ripristina lo stato su `Intact` |
 
@@ -119,14 +120,22 @@ Rappresenta una singola cella della griglia.
 
 ### `BattleGrid.cs` — Namespace: `BattleNavale.Core`
 
-`MonoBehaviour` che gestisce la griglia 10×10.
+`MonoBehaviour` che gestisce la griglia configurabile e la sua rappresentazione visiva 3D.
 
-| Membro | Descrizione |
-|---|---|
-| `_cells[10,10]` | Matrice di celle |
-| `Awake()` | Inizializza la griglia |
-| `ReceiveAttack(x, y)` | Delega l'attacco alla cella `[x, y]` |
-| `UndoAttack(x, y)` | Delega l'undo alla cella `[x, y]` |
+| Membro | Tipo | Descrizione |
+|---|---|---|
+| `_cells[,]` | `Cell[,]` | Matrice logica delle celle |
+| `_cellObjects[,]` | `GameObject[,]` | Oggetti 3D della griglia nella scena |
+| `_cellRenderers[,]` | `Renderer[,]` | Renderer per il feedback visivo |
+| `_cellPrefab` | `GameObject` | Prefab usato per istanziare ogni cella |
+| `_cellSize` | `float` | Distanza tra le celle (default: `1`) |
+| `CellSize` | getter | Espone `_cellSize` agli altri script |
+| `_gridWidth`, `_gridHeight` | `int` | Dimensioni configurabili della griglia (default: `5`) |
+| `Awake()` | metodo | Inizializza le matrici e chiama `GenerateGrid()` |
+| `GenerateGrid()` | metodo | Istanzia i prefab nella scena sotto un `GridHolder` |
+| `ReceiveAttack(x, y)` | metodo | Valida la cella (blocca se già colpita), delega a `Cell`, colora la cella in **rosso** |
+| `UndoAttack(x, y)` | metodo | Delega l'undo a `Cell`, ripristina il colore in **bianco** |
+| `OnDestroy()` | metodo | Distrugge il `GridHolder` |
 
 ---
 
@@ -149,10 +158,10 @@ Interfaccia per i giocatori.
 | `_isMyTurn` | Flag per abilitare l'input |
 | `_turnManager` | Riferimento serializzato al `TurnManager` |
 | `_battleGrid` | Riferimento serializzato alla `BattleGrid` nemica |
-| `TakeTurn()` | Abilita l'input |
-| `Update()` | Legge il click sinistro del mouse e invia un `AttackCommand` al `TurnManager` |
-
-> **Nota:** Le coordinate dell'attacco sono attualmente hardcoded a `(0, 0)` — placeholder da completare con la logica di selezione cella.
+| `_mainCamera` | Riferimento a `Camera.main`, inizializzato in `Awake()` |
+| `TakeTurn()` | Abilita l'input impostando `_isMyTurn = true` |
+| `Update()` | **Click sinistro** — lancia un raycast dalla camera; calcola le coordinate della cella colpita tramite `hit.point` e `CellSize`; crea un `AttackCommand` e lo passa al `TurnManager` |
+| `Update()` | **Tasto Z** — chiama `TurnManager.UndoLastCommand()` per annullare l'ultimo attacco |
 
 ---
 
@@ -164,9 +173,9 @@ Interfaccia per i giocatori.
 |---|---|---|
 | `_turnQueue` | `Queue<IPlayer>` | Coda circolare dei giocatori |
 | `_commandHistory` | `Stack<ICommand>` | Cronologia comandi per l'undo |
-| `StartGame(p1, p2)` | metodo | Inizializza la coda con i due giocatori |
-| `NextTurn()` | metodo | Passa il turno al giocatore successivo |
-| `ExecuteCommand(cmd)` | metodo | Esegue il comando e lo aggiunge allo stack |
+| `StartGame(p1, p2)` | metodo | Inizializza la coda con i due giocatori e avvia il primo turno |
+| `NextTurn()` | metodo | Passa il turno al giocatore successivo (ruota la coda) |
+| `ExecuteCommand(cmd)` | metodo | Esegue il comando, lo aggiunge allo stack e chiama `NextTurn()` |
 | `UndoLastCommand()` | metodo | Preleva e annulla l'ultimo comando dello stack |
 
 ---
@@ -190,11 +199,18 @@ GameManager
     └── TurnManager.StartGame(playerOne, playerTwo)
             │
             ├── NextTurn() → Player.TakeTurn()
+            │       └── Update() → Raycast → coordinate (x, y)
             │
             └── ExecuteCommand(ICommand)
                     │
-                    ├── command.Execute() → BattleGrid.ReceiveAttack(x, y) → Cell.ReceiveAttack()
-                    └── command.Undo()   → BattleGrid.UndoAttack(x, y)   → Cell.UndoAttack()
+                    ├── command.Execute() → BattleGrid.ReceiveAttack(x, y)
+                    │       ├── valida CellState (blocca se già Hit)
+                    │       ├── Cell.ReceiveAttack()  → CellState = Hit
+                    │       └── Renderer.color = Color.red
+                    │
+                    └── command.Undo()   → BattleGrid.UndoAttack(x, y)
+                            ├── Cell.UndoAttack()    → CellState = Intact
+                            └── Renderer.color = Color.white
 
 Stack<ICommand> _commandHistory  ←  cronologia per Undo
 Queue<IPlayer>  _turnQueue       ←  rotazione turni
@@ -206,8 +222,12 @@ Queue<IPlayer>  _turnQueue       ←  rotazione turni
 
 - **Turni a rotazione** — i giocatori si alternano tramite una `Queue`.
 - **Esecuzione comandi** — ogni attacco è un oggetto `ICommand` autonomo.
-- **Undo** — l'ultimo attacco può essere annullato tramite `TurnManager.UndoLastCommand()`.
-- **Griglia 10×10** — ogni cella tiene traccia del proprio stato (`Intact` / `Hit`).
+- **Undo (tasto Z)** — l'ultimo attacco può essere annullato; il colore della cella viene ripristinato.
+- **Selezione cella via raycast** — il click del mouse lancia un `Physics.Raycast` dalla camera; le coordinate logiche vengono calcolate da `hit.point` e `CellSize`.
+- **Validazione attacchi** — `BattleGrid.ReceiveAttack()` blocca gli attacchi su celle già colpite.
+- **Feedback visivo** — le celle colpite diventano **rosse**; l'undo le riporta **bianche**.
+- **Griglia configurabile** — `_gridWidth`, `_gridHeight` e `_cellSize` sono `[SerializeField]` impostabili dall'Inspector (default: 5×5).
+- **Generazione 3D automatica** — `GenerateGrid()` istanzia i prefab nella scena all'avvio.
 - **Estensibilità** — nuovi comandi si aggiungono implementando `ICommand`, senza modificare il codice esistente.
 
 ---
