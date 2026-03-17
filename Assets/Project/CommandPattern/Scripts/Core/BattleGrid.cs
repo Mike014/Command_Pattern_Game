@@ -8,6 +8,7 @@ namespace BattleNavale.Core
         // private const int GridSize = 10;
         [SerializeField] private GameObject _cellPrefab;
         [SerializeField] private float _cellSize = 1f;
+        public float CellSize => _cellSize; // getter
         [SerializeField] private int _gridWidth = 5;
         [SerializeField] private int _gridHeight = 5;
         private GameObject _gridParent;
