@@ -21,6 +21,11 @@ namespace BattleNavale.Core
 
         public void ReceiveAttack(int x, int y)
         {
+            if (_cells[x, y].State == CellState.Hit)
+            {
+                Debug.Log("[Grid]: Cella già colpita!");
+                return;
+            }
             _cells[x, y].ReceiveAttack();
             Debug.Log("[Grid]: Attacco Ricevuto");
         }
@@ -46,7 +51,7 @@ namespace BattleNavale.Core
                     Vector3 spawnPosition = new Vector3(x * _cellSize, 0, y * _cellSize);
 
                     _cells[x, y] = new Cell();
-                    
+
                     // 2. Istanziamo la cella fisica nel mondo
                     GameObject newCell = Instantiate(_cellPrefab, spawnPosition, Quaternion.identity);
 
@@ -68,4 +73,3 @@ namespace BattleNavale.Core
 
 
 
-   

@@ -9,6 +9,7 @@ namespace BattleNavale.Core
     {
         private CellState _state;
         public CellState State => _state;
+        
         public void ReceiveAttack()
         {
             _state = CellState.Hit;
