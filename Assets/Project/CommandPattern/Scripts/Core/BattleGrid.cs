@@ -5,20 +5,17 @@ namespace BattleNavale.Core
     public class BattleGrid : MonoBehaviour
     {
         private Cell[,] _cells;
-        private const int GridSize = 10;
+        // private const int GridSize = 10;
+        [SerializeField] private GameObject _cellPrefab;
+        [SerializeField] private float _cellSize = 1f;
+        [SerializeField] private int _gridWidth = 5;
+        [SerializeField] private int _gridHeight = 5;
+        private GameObject _gridParent;
 
         private void Awake()
         {
-            _cells = new Cell[GridSize, GridSize];
-
-            // Logica per costruire la griglia
-            for (int x = 0; x < GridSize; x++)
-            {
-                for (int y = 0; y < GridSize; y++)
-                {
-                    _cells[x, y] = new Cell();
-                }
-            }
+            _cells = new Cell[_gridWidth, _gridHeight];
+            GenerateGrid();
         }
 
         public void ReceiveAttack(int x, int y)
@@ -32,6 +29,42 @@ namespace BattleNavale.Core
             _cells[x, y].UndoAttack();
             Debug.Log("[Grid]: Attacco Undo");
         }
+
+        void GenerateGrid()
+        {
+            // Creiamo un contenitore vuoto per mantenere ordinata la scena
+            _gridParent = new GameObject("GridHolder");
+
+            // Ciclo esterno: scorre le righe (Y logico, che diventerà Z fisico in Unity)
+            for (int y = 0; y < _gridHeight; y++)
+            {
+                // Ciclo interno: scorre le colonne (X logico e fisico)
+                for (int x = 0; x < _gridWidth; x++)
+                {
+                    // 1. Calcoliamo la posizione esatta nello spazio in base al tuo ragionamento
+                    Vector3 spawnPosition = new Vector3(x * _cellSize, 0, y * _cellSize);
+
+                    _cells[x, y] = new Cell();
+                    
+                    // 2. Istanziamo la cella fisica nel mondo
+                    GameObject newCell = Instantiate(_cellPrefab, spawnPosition, Quaternion.identity);
+
+                    // 3. Organizzazione: impostiamo la cella come "figlia" del contenitore
+                    newCell.transform.SetParent(_gridParent.transform);
+
+                    // 4. Debugging: diamo un nome univoco alla cella per riconoscerla nell'Inspector
+                    newCell.name = $"Cell_{x}_{y}";
+                }
+            }
+        }
+
+        void OnDestroy()
+        {
+            Destroy(_gridParent);
+        }
     }
 }
 
+
+
+   

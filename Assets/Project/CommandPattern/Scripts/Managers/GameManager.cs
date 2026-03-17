@@ -3,7 +3,6 @@ using BattleNavale.Entities;
 
 namespace BattleNavale.Managers
 {
-
     public class GameManager : MonoBehaviour
     {
         [SerializeField] private TurnManager _turnManager;

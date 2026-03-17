@@ -1,6 +1,6 @@
 using BattleNavale.Commands;
-using BattleNavale.Core;
 using BattleNavale.Managers;
+using BattleNavale.Core;
 using UnityEngine;
 
 namespace BattleNavale.Entities
@@ -20,11 +20,19 @@ namespace BattleNavale.Entities
         {
             if (!_isMyTurn) return;
 
+            if (Input.GetKeyDown(KeyCode.Z))
+            {
+                _turnManager.UndoLastCommand();
+                Debug.Log($"Tasto (Z) premuto");
+            }
+
             if (Input.GetMouseButtonDown(0))
             {
                 ICommand command = new AttackCommand(0, 0, _battleGrid); // placeholder
-                _turnManager.ExecuteCommand(command);
                 _isMyTurn = false;
+                _turnManager.ExecuteCommand(command);
+                Debug.Log($"Tasto (0) premuto");
+                // _turnManager.NextTurn();
             }
         }
     }

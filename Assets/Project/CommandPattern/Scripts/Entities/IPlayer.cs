@@ -1,4 +1,3 @@
-
 namespace BattleNavale.Entities
 {
     public interface IPlayer

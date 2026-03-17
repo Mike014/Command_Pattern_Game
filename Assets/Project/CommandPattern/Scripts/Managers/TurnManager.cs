@@ -15,10 +15,12 @@ namespace BattleNavale.Managers
             _turnQueue = new Queue<IPlayer>();
             _commandHistory = new Stack<ICommand>();
         }
+
         public void StartGame(IPlayer playerOne, IPlayer playerTwo)
         {
             _turnQueue.Enqueue(playerOne);
             _turnQueue.Enqueue(playerTwo);
+            NextTurn(); // avvia il primo turno
         }
 
         public void NextTurn()
@@ -40,6 +42,9 @@ namespace BattleNavale.Managers
         {
             command.Execute();
             _commandHistory.Push(command);
+            NextTurn();
         }
     }
 }
+
+
