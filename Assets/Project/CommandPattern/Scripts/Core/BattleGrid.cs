@@ -5,7 +5,8 @@ namespace BattleNavale.Core
     public class BattleGrid : MonoBehaviour
     {
         private Cell[,] _cells;
-        // private const int GridSize = 10;
+        private GameObject[,] _cellObjects;
+        private Renderer[,] _cellRenderers;
         [SerializeField] private GameObject _cellPrefab;
         [SerializeField] private float _cellSize = 1f;
         public float CellSize => _cellSize; // getter
@@ -16,6 +17,8 @@ namespace BattleNavale.Core
         private void Awake()
         {
             _cells = new Cell[_gridWidth, _gridHeight];
+            _cellObjects = new GameObject[_gridWidth, _gridHeight];
+            _cellRenderers = new Renderer[_gridWidth, _gridHeight];
             GenerateGrid();
         }
 
@@ -24,16 +27,21 @@ namespace BattleNavale.Core
             if (_cells[x, y].State == CellState.Hit)
             {
                 Debug.Log("[Grid]: Cella già colpita!");
+
                 return;
             }
             _cells[x, y].ReceiveAttack();
             Debug.Log("[Grid]: Attacco Ricevuto");
+
+            _cellRenderers[x, y].material.color = Color.red;
         }
 
         public void UndoAttack(int x, int y)
         {
             _cells[x, y].UndoAttack();
             Debug.Log("[Grid]: Attacco Undo");
+
+            _cellRenderers[x, y].material.color = Color.white;
         }
 
         void GenerateGrid()
@@ -47,18 +55,17 @@ namespace BattleNavale.Core
                 // Ciclo interno: scorre le colonne (X logico e fisico)
                 for (int x = 0; x < _gridWidth; x++)
                 {
-                    // 1. Calcoliamo la posizione esatta nello spazio in base al tuo ragionamento
                     Vector3 spawnPosition = new Vector3(x * _cellSize, 0, y * _cellSize);
 
                     _cells[x, y] = new Cell();
 
-                    // 2. Istanziamo la cella fisica nel mondo
                     GameObject newCell = Instantiate(_cellPrefab, spawnPosition, Quaternion.identity);
 
-                    // 3. Organizzazione: impostiamo la cella come "figlia" del contenitore
+                    _cellObjects[x, y] = newCell;
+                    _cellRenderers[x, y] = newCell.GetComponent<Renderer>();
+
                     newCell.transform.SetParent(_gridParent.transform);
 
-                    // 4. Debugging: diamo un nome univoco alla cella per riconoscerla nell'Inspector
                     newCell.name = $"Cell_{x}_{y}";
                 }
             }
@@ -70,6 +77,4 @@ namespace BattleNavale.Core
         }
     }
 }
-
-
 
